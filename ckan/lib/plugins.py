@@ -265,9 +265,9 @@ class DefaultDatasetForm(object):
         keys_in_schema = set(schema_keys) - set(surplus_keys_schema)
 
         missing_keys = keys_in_schema - set(data_dict.keys())
-        if missing_keys:
-            log.info('incorrect form fields posted, missing %s' % missing_keys)
-            raise dictization_functions.DataError(data_dict)
+        #if missing_keys:
+        #    log.info('incorrect form fields posted, missing %s' % missing_keys)
+        #    raise dictization_functions.DataError(data_dict)
 
     def setup_template_variables(self, context, data_dict):
         authz_fn = logic.get_action('group_list_authz')
