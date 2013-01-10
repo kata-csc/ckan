@@ -884,8 +884,8 @@ class PackageController(BaseController):
                                         id=pkg_dict['name'])
                     redirect(url)
                 # Make sure we don't index this dataset
-                if request.params['save'] not in ['go-resource', 'go-metadata']:
-                    data_dict['state'] = 'draft'
+                #if request.params['save'] not in ['go-resource', 'go-metadata']:
+                #    data_dict['state'] = 'draft'
                 # allow the state to be changed
                 context['allow_state_change'] = True
 
