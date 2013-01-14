@@ -234,10 +234,5 @@ class RelatedController(base.BaseController):
         A tuple of options for the different related types for use in
         the form.select() template macro.
         '''
-        return ({"text": _("API"), "value": "api"},
-                {"text": _("Application"), "value": "application"},
-                {"text": _("Idea"), "value": "idea"},
-                {"text": _("News Article"), "value": "news_article"},
-                {"text": _("Paper"), "value": "paper"},
-                {"text": _("Post"), "value": "post"},
-                {"text": _("Visualization"), "value": "visualization"})
+        return ({"text": _("Publication"), "value": "pub"},
+                {"text": _("Dataset"), "value": "dataset"},)
