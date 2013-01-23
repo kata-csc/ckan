@@ -398,7 +398,7 @@ class BaseController(WSGIController):
                       (request.POST, inst)
                 raise ValueError(msg)
 
-        elif try_url_params and request.GET:
+        elif request.method == 'GET':
             return request.GET.mixed()
 
         else:

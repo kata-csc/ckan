@@ -183,7 +183,9 @@ this.ckan.module('popover-context', function($, _) {
 				params.title = raw.title;
 				params.name = raw.name;
 				params.notes = raw.notes;
-				params.num_resources = raw.resources.length;
+				if (raw.resources) {
+					params.num_resources = raw.resources.length;
+				}
 				params.num_tags = raw.tags.length;
 			} else if (type == 'group') {
 				params.id = raw.id;
