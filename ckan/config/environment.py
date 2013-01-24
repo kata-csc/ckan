@@ -313,7 +313,7 @@ def load_environment(global_conf, app_conf):
     # custom filters
     env.filters['empty_and_escape'] = lib.jinja_extensions.empty_and_escape
     env.filters['truncate'] = lib.jinja_extensions.truncate
-    env.globals.update(zip=zip)
+    env.globals.update(zip=zip, len=len, range=range)
     config['pylons.app_globals'].jinja_env = env
 
     # CONFIGURATION OPTIONS HERE (note: all config options will override
