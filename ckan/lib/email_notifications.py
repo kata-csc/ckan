@@ -177,7 +177,7 @@ def send_notification(user, email_dict):
         return
 
     try:
-        ckan.lib.mailer.mail_recipient(user['display_name'], user['email'],
+        ckan.lib.mailer.mail_recipient(user['name'], user['email'],
                 email_dict['subject'], email_dict['body'])
     except ckan.lib.mailer.MailerException:
         raise
