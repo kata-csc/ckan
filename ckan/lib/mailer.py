@@ -89,7 +89,7 @@ def _mail_recipient(recipient_name, recipient_email,
 def mail_recipient(recipient_name, recipient_email, subject,
         body, headers={}):
     return _mail_recipient(recipient_name, recipient_email,
-            g.site_title, g.site_url, subject, body, headers=headers)
+            config.get('ckan.site_title'), config.get('ckan.site_url'), subject, body, headers=headers)
 
 def mail_user(recipient, subject, body, headers={}):
     if (recipient.email is None) or not len(recipient.email):

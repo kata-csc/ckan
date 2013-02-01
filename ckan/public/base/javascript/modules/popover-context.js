@@ -22,12 +22,14 @@ window.popover_context = {
 	dict: {
 		user: {},
 		dataset: {},
-		group: {}
+		group: {},
+		accessreq: {},
 	},
 	render: {
 		user: {},
 		dataset: {},
-		group: {}
+		group: {},
+		accessreq: {},
 	}
 };
 
@@ -194,6 +196,11 @@ this.ckan.module('popover-context', function($, _) {
 				params.description = raw.description;
 				params.num_datasets = raw.packages.length;
 				params.num_followers = raw.num_followers;
+			} else if (type == 'accessreq') {
+				params.following = (raw.ret == 'Yes')
+				params.title = raw.title
+				params.no_owner = raw.no_owner
+				params.id = raw.id
 			}
 			return params;
 		},
