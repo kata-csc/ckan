@@ -896,10 +896,14 @@ def button_attr(enable, type='primary'):
 
 def dataset_display_name(package_or_package_dict):
     if isinstance(package_or_package_dict, dict):
-        return package_or_package_dict.get('title', '') or \
-               package_or_package_dict.get('name', '')
+        title = package_or_package_dict.get('title', '')
+        if not title:
+            pkg = model.Package.get(package_or_package_dict['id'])
+            title = pkg.extras["title_0"]
+        return title
     else:
-        return package_or_package_dict.title or package_or_package_dict.name
+        return package_or_package_dict.title or package_or_package_dict.name or\
+            (package_or_package_dict['extras'].get('title_0'))
 
 
 def dataset_link(package_or_package_dict):
