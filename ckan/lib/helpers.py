@@ -899,7 +899,7 @@ def dataset_display_name(package_or_package_dict):
         title = package_or_package_dict.get('title', '')
         if not title:
             pkg = model.Package.get(package_or_package_dict['id'])
-            title = pkg.extras["title_0"]
+            title = pkg.extras["title_0"] if "title_0" in pkg.extras else package_or_package_dict["name"]
         return title
     else:
         return package_or_package_dict.title or package_or_package_dict.name or\
