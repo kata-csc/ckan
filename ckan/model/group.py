@@ -235,7 +235,13 @@ class Group(vdm.sqlalchemy.RevisionedObjectMixin,
             return
         package = _package.Package.by_name(package_name)
         assert package
-        if not package in self.packages():
+        # Check if the Member about to be created exists. If not, add.
+        # Otherwise the package is in the group already.
+        existing = meta.Session.query(Member).filter(
+            Member.table_id == package.id).filter(
+            Member.group_id == self.id).filter(
+            Member.table_name == 'package').first()
+        if existing is None:
             member = Member(group=self, table_id=package.id,
                             table_name='package')
             meta.Session.add(member)
