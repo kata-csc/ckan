@@ -158,7 +158,7 @@ class Group(vdm.sqlalchemy.RevisionedObjectMixin,
 
 
     def packages(self, with_private=False, limit=None,
-            return_query=False, context=None):
+            return_query=False, context=None, count_only=False):
         '''Return this group's active and pending packages.
 
         Returns all packages in this group with VDM revision state ACTIVE or
@@ -217,6 +217,8 @@ class Group(vdm.sqlalchemy.RevisionedObjectMixin,
 
         if return_query:
             return query
+        elif count_only:
+            return query.count()
         else:
             return query.all()
 

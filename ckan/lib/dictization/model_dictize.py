@@ -31,8 +31,10 @@ def group_list_dictize(obj_list, context,
 
         group_dict['display_name'] = obj.display_name
 
-        group_dict['packages'] = \
-                len(obj.packages(with_private=with_private, context=context))
+        #group_dict['packages'] = \
+        #        len(obj.packages(with_private=with_private, context=context))
+        group_dict['packages'] = obj.packages(
+            with_private=with_private, context=context, count_only=True)
 
         if context.get('for_view'):
             if group_dict['is_organization']:
