@@ -279,6 +279,7 @@ def package_update(context, data_dict):
         model.repo.commit()
 
     log.debug('Updated object %s' % str(pkg.name))
+    ckan.lib.search.rebuild(pkg.name)
 
     return_id_only = context.get('return_id_only', False)
 
