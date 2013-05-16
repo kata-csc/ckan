@@ -117,8 +117,6 @@ def augment_data(data, schema):
     full_schema = make_full_schema(data, schema)
 
     new_data = copy.deepcopy(data)
-    full_schema.pop((u'title',), None)
-    new_data.pop((u'title',), None)
 
     ## fill junk and extras
 
@@ -128,7 +126,6 @@ def augment_data(data, schema):
 
         ## check if any thing naugthy is placed against subschemas
         initial_tuple = key[::2]
-
         if initial_tuple in [initial_key[:len(initial_tuple)]
                              for initial_key in flattented_schema]:
             if data[key] <> []:
