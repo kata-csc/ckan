@@ -9,6 +9,8 @@ sandbox/*
 theme/*
 theme
 dist
+*.iml
+.gitignore
 
 # pylons
 development.ini*
