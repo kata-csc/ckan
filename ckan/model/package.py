@@ -17,7 +17,6 @@ import domain_object
 import activity
 import extension
 
-import ckan.misc
 import ckan.lib.dictization
 
 __all__ = ['Package', 'package_table', 'package_revision_table',
@@ -42,7 +41,7 @@ package_table = Table('package', meta.metadata,
         Column('maintainer_email', types.UnicodeText),
         Column('notes', types.UnicodeText),
         Column('license_id', types.UnicodeText),
-        Column('type', types.UnicodeText),
+        Column('type', types.UnicodeText, default=u'dataset'),
         Column('owner_org', types.UnicodeText),
         Column('private', types.Boolean, default=False),
 )
@@ -216,7 +215,9 @@ class Package(vdm.sqlalchemy.RevisionedObjectMixin,
             if self.metadata_modified else None
         _dict['metadata_created'] = self.metadata_created.isoformat() \
             if self.metadata_created else None
-        _dict['notes_rendered'] = ckan.misc.MarkdownFormat().to_html(self.notes)
+        import ckan.lib.helpers as h
+        _dict['notes_rendered'] = h.render_markdown(self.notes)
+        _dict['type'] = self.type or u'dataset'
         #tracking
         import ckan.model as model
         tracking = model.TrackingSummary.get_for_package(self.id)

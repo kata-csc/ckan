@@ -6,8 +6,6 @@ syntax: glob
 .DS_Store
 ckan.egg-info/*
 sandbox/*
-theme/*
-theme
 dist
 *.iml
 .gitignore
@@ -29,9 +27,6 @@ fl_notes.txt
 *.ini
 .noseids
 *~
-
-# local symlinks
-ckan/public/scripts/ckanjs.js
 
 # custom style
 ckan/public/base/less/custom.less

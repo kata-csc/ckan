@@ -1,7 +1,11 @@
+from pylons import config
 from pylons.test import pylonsapp
+from paste.deploy.converters import asbool
 import paste.fixture
-import ckan
 from routes import url_for
+from nose import SkipTest
+
+import ckan
 from ckan.logic.action.create import package_create, user_create, group_create
 from ckan.logic.action.create import follow_dataset, follow_user
 from ckan.logic.action.update import package_update, resource_update
@@ -18,6 +22,8 @@ class TestActivity(HtmlCheckMethods):
     """
     @classmethod
     def setup(cls):
+        if not asbool(config.get('ckan.activity_streams_enabled', 'true')):
+            raise SkipTest('Activity streams not enabled')
         ckan.tests.CreateTestData.create()
         cls.sysadmin_user = ckan.model.User.get('testsysadmin')
         cls.app = paste.fixture.TestApp(pylonsapp)
@@ -41,7 +47,6 @@ class TestActivity(HtmlCheckMethods):
             'session': ckan.model.Session,
             'user': self.sysadmin_user.name,
             'allow_partial_update': True,
-            'extras_as_string': True,
             }
         user = user_create(context, user_dict)
         offset = url_for(controller='user', action='read', id=user['id'])
@@ -120,14 +125,14 @@ class TestActivity(HtmlCheckMethods):
         result = self.app.get(offset, status=200)
         stripped = self.strip_tags(result)
         assert '%s started following %s' % (user['fullname'],
-                package['title']) in stripped, stripped
+                package['title']) not in stripped, stripped
 
         # Follow another user.
         follow_user(context, {'id': 'joeadmin'})
         result = self.app.get(offset, status=200)
         stripped = self.strip_tags(result)
         assert '%s started following %s' % (user['fullname'],
-                'joeadmin') in stripped, stripped
+                'joeadmin') not in stripped, stripped
 
         # Create a new group.
         group = {

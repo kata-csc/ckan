@@ -3,7 +3,10 @@ import logging
 import types
 import re
 
-from ckan.lib.base import _
+from pylons.i18n import _
+
+import ckan.lib.base as base
+import ckan.model as model
 from ckan.new_authz import is_authorized
 from ckan.lib.navl.dictization_functions import flatten_dict, DataError
 from ckan.plugins import PluginImplementations
@@ -192,7 +195,6 @@ def flatten_to_string_key(dict):
 
 
 def check_access(action, context, data_dict=None):
-    model = context['model']
     user = context.get('user')
 
     log.debug('check access - user %r, action %s' % (user, action))
@@ -217,9 +219,49 @@ def check_access(action, context, data_dict=None):
 
 
 _actions = {}
-
+def clear_actions_cache():
+    _actions.clear()
 
 def get_action(action):
+    '''Return the ckan.logic.action function named by the given string.
+
+    For example:
+
+        get_action('package_create')
+
+    will normally return the ckan.logic.action.create.py:package_create()
+    function.
+
+    Rather than importing a ckan.logic.action function and calling it directly,
+    you should always fetch the function via get_action():
+
+        # Call the package_create action function:
+        get_action('package_create')(context, data_dict)
+
+    This is because CKAN plugins can override action functions using the
+    IActions plugin interface, causing get_action() to return a plugin-provided
+    function instead of the default one.
+
+    As the context parameter passed to an action function is commonly:
+
+        context = {'model': ckan.model, 'session': ckan.model.Session,
+                   'user': pylons.c.user or pylons.c.author}
+
+    an action function returned by get_action() will automatically add these
+    parameters to the context if they are not defined.  This is especially
+    useful for extensions as they should not really be importing parts of ckan
+    eg ckan.model and as such do not have access to model or model.Session.
+
+    If a context of None is passed to the action function then the context dict
+    will be created.
+
+    :param action: name of the action function to return
+    :type action: string
+
+    :returns: the named action function
+    :rtype: callable
+
+    '''
     if _actions:
         if not action in _actions:
             raise KeyError("Action '%s' not found" % action)
@@ -262,6 +304,34 @@ def get_action(action):
             fetched_actions[name] = auth_function
     # Use the updated ones in preference to the originals.
     _actions.update(fetched_actions)
+
+    # wrap the functions
+    for action_name, _action in _actions.items():
+        def make_wrapped(_action, action_name):
+            def wrapped(context=None, data_dict=None, **kw):
+                if kw:
+                    log.critical('%s was pass extra keywords %r'
+                                 % (_action.__name__, kw))
+                if context is None:
+                    context = {}
+                context.setdefault('model', model)
+                context.setdefault('session', model.Session)
+                try:
+                    context.setdefault('user', base.c.user or base.c.author)
+                except TypeError:
+                    # c not registered
+                    pass
+                return _action(context, data_dict, **kw)
+            return wrapped
+
+        fn = make_wrapped(_action, action_name)
+        # we need to mirror the docstring
+        fn.__doc__ = _action.__doc__
+        # we need to retain the side effect free behaviour
+        if getattr(_action, 'side_effect_free', False):
+            fn.side_effect_free = True
+        _actions[action_name] = fn
+
     return _actions.get(action)
 
 
@@ -311,3 +381,76 @@ def side_effect_free(action):
     wrapper.side_effect_free = True
 
     return wrapper
+
+
+class UnknownValidator(Exception):
+    pass
+
+
+_validators_cache = {}
+
+def clear_validators_cache():
+    _validators_cache.clear()
+
+
+def get_validator(validator):
+    '''Return a validator by name or UnknownValidator exception if the
+    validator is not found.  This is mainly so that validators can be made
+    available to extensions via the plugin toolkit.
+
+    :param validator: name of the validator requested
+    :type validator: string
+    '''
+    if  not _validators_cache:
+        validators = _import_module_functions('ckan.lib.navl.validators')
+        _validators_cache.update(validators)
+        validators = _import_module_functions('ckan.logic.validators')
+        _validators_cache.update(validators)
+    try:
+        return _validators_cache[validator]
+    except KeyError:
+        raise UnknownValidator('Validator `%s` does not exist' % validator)
+
+
+class UnknownConverter(Exception):
+    pass
+
+
+_converters_cache = {}
+
+def clear_converters_cache():
+    _converters_cache.clear()
+
+
+def get_converter(converter):
+    '''Return a converter by name or UnknownConverter exception if the
+    converter is not found.  This is mainly so that validators can be made
+    available to extensions via the plugin toolkit.
+
+    :param converter: name of the converter requested
+    :type converter: string
+    '''
+    if not _converters_cache:
+        converters = _import_module_functions('ckan.logic.converters')
+        _converters_cache.update(converters)
+    try:
+        return _converters_cache[converter]
+    except KeyError:
+        raise UnknownConverter('Converter `%s` does not exist' % converter)
+
+
+def _import_module_functions(module_path):
+    '''Import a module and get the functions and return them in a dict'''
+    functions_dict = {}
+    module = __import__(module_path)
+    for part in module_path.split('.')[1:]:
+        module = getattr(module, part)
+    for k, v in module.__dict__.items():
+
+        try:
+            if v.__module__ != module_path:
+                continue
+            functions_dict[k] = v
+        except AttributeError:
+            pass
+    return functions_dict

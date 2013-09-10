@@ -185,16 +185,14 @@ this.ckan.module('popover-context', function($, _) {
 				params.title = raw.title;
 				params.name = raw.name;
 				params.notes = raw.notes;
-				if (raw.resources) {
-					params.num_resources = raw.resources.length;
-				}
-				params.num_tags = raw.tags.length;
+				params.num_resources = raw.num_resources;
+				params.num_tags = raw.num_tags;
 			} else if (type == 'group') {
 				params.id = raw.id;
 				params.title = raw.title;
 				params.name = raw.name;
 				params.description = raw.description;
-				params.num_datasets = raw.packages.length;
+				params.package_count = raw.package_count;
 				params.num_followers = raw.num_followers;
 			} else if (type == 'accessreq') {
 				params.following = (raw.ret == 'Yes')
@@ -253,8 +251,8 @@ this.ckan.module('popover-context', function($, _) {
 			return false;
 		},
 
-		/* Callback from when you follow/unfollow a specified item... this is used to ensure
-		 * all popovers associated to that user get re-populated
+		/* Callback from when you follow/unfollow a specified item... this is
+		 * used to ensure all popovers associated to that user get re-populated
 		 *
 		 * Returns nothing.
 		 */

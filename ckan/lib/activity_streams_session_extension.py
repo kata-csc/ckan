@@ -1,6 +1,10 @@
+from pylons import config
 from sqlalchemy.orm.session import SessionExtension
+from paste.deploy.converters import asbool
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 def activity_stream_item(obj, activity_type, revision, user_id):
     method = getattr(obj, "activity_stream_item", None)
@@ -11,6 +15,7 @@ def activity_stream_item(obj, activity_type, revision, user_id):
             "activity_stream_item() method, it must not be a package.")
         return None
 
+
 def activity_stream_detail(obj, activity_id, activity_type):
     method = getattr(obj, "activity_stream_detail",
             None)
@@ -20,6 +25,7 @@ def activity_stream_detail(obj, activity_id, activity_type):
         logger.debug("Object did not have a suitable  "
             "activity_stream_detail() method.")
         return None
+
 
 class DatasetActivitySessionExtension(SessionExtension):
     """Session extension that emits activity stream activities for packages
@@ -36,6 +42,8 @@ class DatasetActivitySessionExtension(SessionExtension):
 
     """
     def before_commit(self, session):
+        if not asbool(config.get('ckan.activity_streams_enabled', 'true')):
+            return
 
         session.flush()
 
@@ -79,6 +87,11 @@ class DatasetActivitySessionExtension(SessionExtension):
             # object is a package.
             logger.debug("Looks like this object is a package")
             logger.debug("activity: %s" % activity)
+
+            # Don't create activities for private datasets.
+            if obj.private:
+                continue
+
             activities[obj.id] = activity
 
             activity_detail = activity_stream_detail(obj, activity.id, "new")
@@ -113,6 +126,10 @@ class DatasetActivitySessionExtension(SessionExtension):
 
                 for package in related_packages:
                     if package is None: continue
+
+                    # Don't create activities for private datasets.
+                    if package.private:
+                        continue
 
                     if package.id in activities:
                         activity = activities[package.id]

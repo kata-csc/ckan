@@ -191,10 +191,10 @@ def tag_show_rest(context, data_dict):
     return tag_show(context, data_dict)
 
 def get_site_user(context, data_dict):
-    if not context.get('ignore_auth'):
-        return {'success': False, 'msg': 'Only internal services allowed to use this action'}
-    else:
-        return {'success': True}
+    # FIXME this is available to sysadmins currently till
+    # @auth_sysadmins_check decorator is added
+    return {'success': False,
+            'msg': 'Only internal services allowed to use this action'}
 
 
 def member_roles_list(context, data_dict):
@@ -217,3 +217,48 @@ def dashboard_new_activities_count(context, data_dict):
     # This is so a better not authourized message can be sent.
     return new_authz.is_authorized('dashboard_activity_list',
             context, data_dict)
+
+
+def user_follower_list(context, data_dict):
+    return sysadmin(context, data_dict)
+
+
+def dataset_follower_list(context, data_dict):
+    return sysadmin(context, data_dict)
+
+
+def group_follower_list(context, data_dict):
+    return sysadmin(context, data_dict)
+
+
+def _followee_list(context, data_dict):
+    model = context['model']
+
+    # Visitors cannot see what users are following.
+    authorized_user = model.User.get(context.get('user'))
+    if not authorized_user:
+        return {'success': False, 'msg': _('Not authorized')}
+
+    # Any user is authorized to see what she herself is following.
+    requested_user = model.User.get(data_dict.get('id'))
+    if authorized_user == requested_user:
+        return {'success': True}
+
+    # Sysadmins are authorized to see what anyone is following.
+    return sysadmin(context, data_dict)
+
+
+def followee_list(context, data_dict):
+    return _followee_list(context, data_dict)
+
+
+def user_followee_list(context, data_dict):
+    return _followee_list(context, data_dict)
+
+
+def dataset_followee_list(context, data_dict):
+    return _followee_list(context, data_dict)
+
+
+def group_followee_list(context, data_dict):
+    return _followee_list(context, data_dict)

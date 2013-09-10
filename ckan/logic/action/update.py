@@ -168,7 +168,6 @@ def resource_update(context, data_dict):
     model = context['model']
     user = context['user']
     id = _get_or_bust(data_dict, "id")
-    schema = context.get('schema') or ckan.logic.schema.default_update_resource_schema()
 
     resource = model.Resource.get(id)
     context["resource"] = resource
@@ -178,6 +177,13 @@ def resource_update(context, data_dict):
         raise NotFound(_('Resource was not found.'))
 
     _check_access('resource_update', context, data_dict)
+
+    if 'schema' in context:
+        schema = context['schema']
+    else:
+        package_plugin = lib_plugins.lookup_package_plugin(
+            resource.resource_group.package.type)
+        schema = package_plugin.update_package_schema()['resources']
 
     data, errors = _validate(data_dict, schema, context)
     if errors:
@@ -233,20 +239,23 @@ def package_update(context, data_dict):
 
     # get the schema
     package_plugin = lib_plugins.lookup_package_plugin(pkg.type)
-    try:
-        schema = package_plugin.form_to_db_schema_options({'type':'update',
-                                               'api':'api_version' in context,
-                                               'context': context})
-    except AttributeError:
-        schema = package_plugin.form_to_db_schema()
+    if 'schema' in context:
+        schema = context['schema']
+    else:
+        schema = package_plugin.update_package_schema()
 
     if 'api_version' not in context:
-        # old plugins do not support passing the schema so we need
-        # to ensure they still work
-        try:
-            package_plugin.check_data_dict(data_dict, schema)
-        except TypeError:
-            package_plugin.check_data_dict(data_dict)
+        # check_data_dict() is deprecated. If the package_plugin has a
+        # check_data_dict() we'll call it, if it doesn't have the method we'll
+        # do nothing.
+        check_data_dict = getattr(package_plugin, 'check_data_dict', None)
+        if check_data_dict:
+            try:
+                package_plugin.check_data_dict(data_dict, schema)
+            except TypeError:
+                # Old plugins do not support passing the schema so we need
+                # to ensure they still work.
+                package_plugin.check_data_dict(data_dict)
 
     data, errors = _validate(data_dict, schema, context)
     log.debug('package_update validate_errs=%r user=%s package=%s data=%r',
@@ -267,14 +276,18 @@ def package_update(context, data_dict):
 
     pkg = model_save.package_dict_save(data, context)
 
-    context_no_auth = context.copy()
-    context_no_auth['ignore_auth'] = True
-    _get_action('package_owner_org_update')(context_no_auth,
+    context_org_update = context.copy()
+    context_org_update['ignore_auth'] = True
+    context_org_update['defer_commit'] = True
+    _get_action('package_owner_org_update')(context_org_update,
                                             {'id': pkg.id,
                                              'organization_id': pkg.owner_org})
 
     for item in plugins.PluginImplementations(plugins.IPackageController):
         item.edit(pkg)
+
+        item.after_update(context, data)
+
     if not context.get('defer_commit'):
         model.repo.commit()
 
@@ -282,41 +295,15 @@ def package_update(context, data_dict):
 
     return_id_only = context.get('return_id_only', False)
 
+    # Make sure that a user provided schema is not used on package_show
+    context.pop('schema', None)
+
+    # we could update the dataset so we should still be able to read it.
+    context['ignore_auth'] = True
     output = data_dict['id'] if return_id_only \
             else _get_action('package_show')(context, {'id': data_dict['id']})
 
     return output
-
-def package_update_validate(context, data_dict):
-    model = context['model']
-    user = context['user']
-
-    id = _get_or_bust(data_dict, "id")
-
-    pkg = model.Package.get(id)
-    context["package"] = pkg
-
-    if pkg is None:
-        raise NotFound(_('Package was not found.'))
-    data_dict["id"] = pkg.id
-
-    # get the schema
-    package_plugin = lib_plugins.lookup_package_plugin(pkg.type)
-    try:
-        schema = package_plugin.form_to_db_schema_options({'type':'update',
-                                               'api':'api_version' in context,
-                                               'context': context})
-    except AttributeError:
-        schema = package_plugin.form_to_db_schema()
-
-    _check_access('package_update', context, data_dict)
-
-    data, errors = _validate(data_dict, schema, context)
-    if errors:
-        model.Session.rollback()
-        raise ValidationError(errors)
-    return data
-
 
 def _update_package_relationship(relationship, comment, context):
     model = context['model']
@@ -1069,4 +1056,5 @@ def package_owner_org_update(context, data_dict):
                                   state='active')
         model.Session.add(member_obj)
 
-    model.Session.commit()
+    if not context.get('defer_commit'):
+        model.Session.commit()
