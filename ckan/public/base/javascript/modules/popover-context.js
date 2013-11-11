@@ -1,7 +1,7 @@
 /* Popover context
  * These appear when someone hovers over a context item in a activity stream to
- * give the user more context into that particular item. It also allows for people to
- * follow and unfollow quickly from within the popover
+ * give the user more context into that particular item. It also allows for
+ * people to follow and unfollow quickly from within the popover
  *
  * id - The user_id of user
  * context - The type of this popover: currently supports user & package
@@ -22,14 +22,12 @@ window.popover_context = {
 	dict: {
 		user: {},
 		dataset: {},
-		group: {},
-		accessreq: {},
+		group: {}
 	},
 	render: {
 		user: {},
 		dataset: {},
-		group: {},
-		accessreq: {},
+		group: {}
 	}
 };
 
@@ -63,6 +61,7 @@ this.ckan.module('popover-context', function($, _) {
 				}
 				this.el.popover({
 					animation: false,
+					html: true,
 					content: this.options.throbber.replace('{SITE_ROOT}', ckan.SITE_ROOT) + this.i18n('loading'),
 					placement: 'bottom'
 				});
@@ -102,7 +101,8 @@ this.ckan.module('popover-context', function($, _) {
 			}
 		},
 
-		/* Handles the showing of the popover on hover (also hides other active popovers)
+		/* Handles the showing of the popover on hover (also hides other active
+		 * popovers)
 		 *
 		 * Returns nothing.
 		 */
@@ -164,7 +164,8 @@ this.ckan.module('popover-context', function($, _) {
 			}
 		},
 
-		/* Used to break down a raw object into something a little more passable into a GET request
+		/* Used to break down a raw object into something a little more
+		 * passable into a GET request
 		 *
 		 * Returns object.
 		 */
@@ -194,11 +195,6 @@ this.ckan.module('popover-context', function($, _) {
 				params.description = raw.description;
 				params.package_count = raw.package_count;
 				params.num_followers = raw.num_followers;
-			} else if (type == 'accessreq') {
-				params.following = (raw.ret == 'Yes')
-				params.title = raw.title
-				params.no_owner = raw.no_owner
-				params.id = raw.id
 			}
 			return params;
 		},
