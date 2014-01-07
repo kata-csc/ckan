@@ -1,5 +1,6 @@
 import logging
 from urllib import quote
+from urlparse import urlparse
 
 from pylons import session, c, g, request, config
 from pylons.i18n import _
@@ -287,11 +288,7 @@ class UserController(base.BaseController):
             return self.edit(id, data_dict, errors, error_summary)
 
     def login(self, error=None):
-        lang = session.pop('lang', None)
-        if lang:
-            session.save()
-            return h.redirect_to(locale=str(lang), controller='user',
-                                 action='login')
+
         if 'error' in request.params:
             h.flash_error(request.params['error'])
 
@@ -301,7 +298,10 @@ class UserController(base.BaseController):
             g.openid_enabled = False
 
         if not c.user:
-            came_from = request.params.get('came_from', '')
+            came_from = request.params.get('came_from')
+            if not came_from:
+                came_from = h.url_for(controller='user', action='logged_in',
+                                      __ckan_no_root=True)
             c.login_handler = h.url_for(
                 self._get_repoze_handler('login_handler_path'),
                 came_from=came_from)
@@ -314,14 +314,10 @@ class UserController(base.BaseController):
             return render('user/logout_first.html')
 
     def logged_in(self):
-        # we need to set the language via a redirect
-        lang = session.pop('lang', None)
-        session.save()
+        # redirect if needed
         came_from = request.params.get('came_from', '')
-
-        # we need to set the language explicitly here or the flash
-        # messages will not be translated.
-        i18n.set_lang(lang)
+        if self._sane_came_from(came_from):
+            return h.redirect_to(str(came_from))
 
         if c.user:
             context = None
@@ -331,8 +327,6 @@ class UserController(base.BaseController):
 
             h.flash_success(_("%s is now logged in") %
                             user_dict['display_name'])
-            if came_from:
-                return h.redirect_to(str(came_from))
             return self.me()
         else:
             err = _('Login failed. Bad username or password.')
@@ -341,29 +335,23 @@ class UserController(base.BaseController):
                          'with a user account.)')
             if h.asbool(config.get('ckan.legacy_templates', 'false')):
                 h.flash_error(err)
-                h.redirect_to(locale=lang, controller='user',
+                h.redirect_to(controller='user',
                               action='login', came_from=came_from)
             else:
                 return self.login(error=err)
 
     def logout(self):
-        # save our language in the session so we don't lose it
-        session['lang'] = request.environ.get('CKAN_LANG')
-        session.save()
-        h.redirect_to(self._get_repoze_handler('logout_handler_path'))
-
-    def set_lang(self, lang):
-        # this allows us to set the lang in session.  Used for logging
-        # in/out to prevent being lost when repoze.who redirects things
-        session['lang'] = str(lang)
-        session.save()
+        url = h.url_for(controller='user', action='logged_out_page',
+                        __ckan_no_root=True)
+        h.redirect_to(self._get_repoze_handler('logout_handler_path') +
+                      '?came_from=' + url)
 
     def logged_out(self):
-        # we need to get our language info back and the show the correct page
-        lang = session.get('lang')
-        c.user = None
-        session.delete()
-        h.redirect_to(locale=lang, controller='user', action='logged_out_page')
+        # redirect if needed
+        came_from = request.params.get('came_from', '')
+        if self._sane_came_from(came_from):
+            return h.redirect_to(str(came_from))
+        h.redirect_to(controller='user', action='logged_out_page')
 
     def logged_out_page(self):
         return render('user/logout.html')
@@ -619,3 +607,14 @@ class UserController(base.BaseController):
                              or e.error_dict)
             h.flash_error(error_message)
         h.redirect_to(controller='user', action='read', id=id)
+
+    def _sane_came_from(self, url):
+        '''Returns True if came_from is local'''
+        if not url or (len(url) >= 2 and url.startswith('//')):
+            return False
+        parsed = urlparse(url)
+        if parsed.scheme:
+            domain = urlparse(h.url_for('/', qualified=True)).netloc
+            if domain != parsed.netloc:
+                return False
+        return True
