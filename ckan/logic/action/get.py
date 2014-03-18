@@ -185,8 +185,6 @@ def related_show(context, data_dict=None):
 def related_list(context, data_dict=None):
     '''Return a dataset's related items.
 
-    Either the ``id`` or the ``dataset`` parameter must be given.
-
     :param id: id or name of the dataset (optional)
     :type id: string
     :param dataset: dataset dictionary of the dataset (optional)
@@ -235,10 +233,12 @@ def related_list(context, data_dict=None):
 
         if data_dict.get('featured', False):
             related_list = related_list.filter(model.Related.featured == 1)
+        related_items = related_list.all()
+        context['sorted'] = True
     else:
         relateds = model.Related.get_for_dataset(dataset, status='active')
         related_items = (r.related for r in relateds)
-        related_list = model_dictize.related_list_dictize( related_items, context)
+    related_list = model_dictize.related_list_dictize( related_items, context)
     return related_list
 
 
@@ -2150,7 +2150,16 @@ def organization_activity_list_html(context, data_dict):
 
     '''
     activity_stream = organization_activity_list(context, data_dict)
-    return activity_streams.activity_list_to_html(context, activity_stream)
+    offset = int(data_dict.get('offset', 0))
+    extra_vars = {
+        'controller': 'organization',
+        'action': 'activity',
+        'id': data_dict['id'],
+        'offset': offset,
+        }
+
+    return activity_streams.activity_list_to_html(context, activity_stream,
+            extra_vars)
 
 def recently_changed_packages_activity_list_html(context, data_dict):
     '''Return the activity stream of all recently changed packages as HTML.
