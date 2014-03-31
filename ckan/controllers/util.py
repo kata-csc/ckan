@@ -3,7 +3,7 @@ import re
 import ckan.lib.base as base
 import ckan.lib.i18n as i18n
 import ckan.lib.helpers as h
-from ckan.common import _
+from pylons.i18n import _
 
 
 class UtilController(base.BaseController):
