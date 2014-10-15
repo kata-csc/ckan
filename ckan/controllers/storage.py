@@ -182,7 +182,7 @@ class StorageController(BaseController):
             metadata = self.ofs.get_metadata(BUCKET, label)
             filepath = file_url[len("file://"):]
             headers = {
-                # 'Content-Disposition':'attachment; filename="%s"' % label,
+                'Content-Disposition':'attachment; filename="%s"' % metadata.get('filename-original', label),
                 'Content-Type': metadata.get('_format', 'text/plain')}
             fapp = FileApp(filepath, headers=None, **headers)
             return fapp(request.environ, self.start_response)
